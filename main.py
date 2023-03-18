@@ -35,7 +35,7 @@ def generate_model():
         (directory = TRAIN,
          target_size = (HEIGHT, WIDTH),
          class_mode = "categorical",
-         batch_size = 32,
+         batch_size = 70,
          subset = "training")
 
     val_datagen = tf.keras.preprocessing.image.ImageDataGenerator(rescale=1 / 255.0)
@@ -44,7 +44,7 @@ def generate_model():
         (directory=TRAIN,
          target_size=(HEIGHT, WIDTH),
          class_mode="categorical",
-         batch_size=32,
+         batch_size=70,
          subset="validation")
 
     mobilenet = tf.keras.applications.mobilenet_v2.MobileNetV2 \
@@ -73,14 +73,14 @@ def generate_model():
 
     earlystop = tf.keras.callbacks.EarlyStopping \
         (monitor="val_accuracy",
-         patience=5,
+         patience=10,
          verbose=1)
 
-    batch_size = 32
+    batch_size = 70
     history = model.fit \
         (train_data,
          steps_per_epoch=len(train_data) // batch_size,
-         epochs=15,
+         epochs=30,
          validation_data=val_data,
          validation_steps=len(val_data) // batch_size,
          callbacks=[checkpoint, earlystop],
@@ -94,6 +94,15 @@ def load_model():
     model = keras.models.load_model("Gender.h5")
     return model
 
+def get_optimal_font_scale(text, width):
+    for scale in reversed(range(0, 60, 1)):
+        textSize = cv2.getTextSize(text, fontFace = cv2.FONT_HERSHEY_TRIPLEX, fontScale = scale / 10, thickness = 1)
+        new_width = textSize[0][0]
+        if new_width <= width:
+            return scale/15
+
+    return 0.5
+
 def determine_gender(img, x, y, w, h, model):
     face = img[y:y+h, x:x+w]
     face = cv2.resize(face, (150, 150))
@@ -101,15 +110,19 @@ def determine_gender(img, x, y, w, h, model):
     reshape = numpy.reshape(scaled, (1, 150, 150, 3))
     img_vs = np.vstack([reshape])
     pred = model.predict(img_vs)
-
-    text_scale = 0.07
+    font_scale = 3 * (img.shape[1] // 6)
 
     print(pred)
+
     if pred[0][0] > pred[0][1]:
-        cv2.putText(img, "FEMALE", (x,y-10), cv2.FONT_HERSHEY_TRIPLEX, (w * h)/(100*100),(69, 47, 235), 2)
+        t = "FEMALE [{:0.2f}%]".format((pred[0][0]) * 100)
+        font_size = get_optimal_font_scale(t, font_scale)
+        cv2.putText(img, t, (x,y-10), cv2.FONT_HERSHEY_TRIPLEX, font_size,(69, 47, 235), 1)
         image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     else:
-        cv2.putText(img, "MALE", (x, y - 10), cv2.FONT_HERSHEY_TRIPLEX,  (w * h)/(100*100), (235, 72, 47), 2)
+        t = "MALE [{:0.2f}%]".format((pred[0][1]) * 100)
+        font_size = get_optimal_font_scale(t, font_scale)
+        cv2.putText(img, t, (x, y - 10), cv2.FONT_HERSHEY_TRIPLEX, font_size, (235, 72, 47), 1)
         image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
 def find_face(model):
