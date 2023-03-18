@@ -14,7 +14,6 @@ TRAIN = "Images\\Training"
 VALIDATION = "Images\\Validation"
 HEIGHT = 150
 WIDTH = 150
-LABEL = ["MALE", "FEMALE"]
 
 
 def generate_model():
@@ -101,7 +100,7 @@ def get_optimal_font_scale(text, width):
         if new_width <= width:
             return scale/15
 
-    return 0.5
+    return 1/new_width
 
 def determine_gender(img, x, y, w, h, model):
     face = img[y:y+h, x:x+w]
@@ -115,18 +114,19 @@ def determine_gender(img, x, y, w, h, model):
     print(pred)
 
     if pred[0][0] > pred[0][1]:
-        t = "FEMALE [{:0.2f}%]".format((pred[0][0]) * 100)
+        t = "FEMALE [{:0.2f}%]".format((pred[0][0]) * 100) if pred[0][0] >= 60.0 else "FEMALE {{?}} [{:0.2f}%]".format((pred[0][0]) * 100)
         font_size = get_optimal_font_scale(t, font_scale)
         cv2.putText(img, t, (x,y-10), cv2.FONT_HERSHEY_TRIPLEX, font_size,(69, 47, 235), 1)
         image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    else:
-        t = "MALE [{:0.2f}%]".format((pred[0][1]) * 100)
+    elif pred[0][1] > pred[0][0]:
+        t = "MALE [{:0.2f}%]".format((pred[0][1]) * 100) if pred[0][1] >= 60 else "MALE {{?}} [{:0.2f}%]".format((pred[0][1]) * 100)
         font_size = get_optimal_font_scale(t, font_scale)
         cv2.putText(img, t, (x, y - 10), cv2.FONT_HERSHEY_TRIPLEX, font_size, (235, 72, 47), 1)
         image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
 def find_face(model):
-    img = cv2.imread("test_5.jpg")
+    i = "test_8.jpg"
+    img = cv2.imread(i)
     image_g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     front_face_cas = cv2.CascadeClassifier("haarcascade_frontalface_alt2.xml")
@@ -136,7 +136,7 @@ def find_face(model):
     # profile_faces = profile_face_cas.detectMultiScale(image_g, 1.06, 8)
 
     for (x, y, w, h) in front_faces:
-        cv2.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 2)
+        cv2.rectangle(img, (x, y), (x + w + 2, y + h + 2), (107, 235, 52), 2)
         roi_gray = image_g[y:y + h, x:x + w]
         roi_color = img[y:y + h, x:x + w]
 
@@ -147,9 +147,12 @@ def find_face(model):
     #     roi_gray = image_g[y:y + h, x:x + w]
     #     roi_color = img[y:y + h, x:x + w]
 
-    cv2.imshow("img", img)
+    cv2.namedWindow(i, cv2.WINDOW_NORMAL)
+    cv2.setWindowProperty(i, cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_KEEPRATIO)
+    cv2.imshow(i, img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+
 
 
 def main():
