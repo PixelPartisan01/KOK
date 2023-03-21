@@ -11,6 +11,10 @@ HEIGHT = 150
 WIDTH = 150
 
 def generate_model():
+    sess = tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(log_device_placement=True))
+    epo = 50
+    batch_size = 70
+
     config = tf.compat.v1.ConfigProto()
     config.gpu_options.allow_growth = True
     session = tf.compat.v1.InteractiveSession(config=config)
@@ -28,7 +32,7 @@ def generate_model():
         (directory = TRAIN,
          target_size = (HEIGHT, WIDTH),
          class_mode = "categorical",
-         batch_size = 70,
+         batch_size = batch_size,
          subset = "training")
 
     val_datagen = tf.keras.preprocessing.image.ImageDataGenerator(rescale=1 / 255.0)
@@ -37,7 +41,7 @@ def generate_model():
         (directory=TRAIN,
          target_size=(HEIGHT, WIDTH),
          class_mode="categorical",
-         batch_size=70,
+         batch_size = batch_size,
          subset="validation")
 
     mobilenet = tf.keras.applications.mobilenet_v2.MobileNetV2 \
@@ -50,7 +54,7 @@ def generate_model():
 
     model = tf.keras.models.Sequential()
     model.add(mobilenet)
-    model.add(tf.keras.layers.Dense(128, activation="relu"))
+    model.add(tf.keras.layers.Dense(64, activation="relu"))
 
     model.add(tf.keras.layers.Flatten())
     model.add(tf.keras.layers.Dense(2, activation="softmax"))  # megegyzeik az osztályok darabszámával
@@ -64,23 +68,22 @@ def generate_model():
          save_best_only=True,
          verbose=1)
 
-    earlystop = tf.keras.callbacks.EarlyStopping \
-        (monitor="val_accuracy",
-         patience=10,
-         verbose=1)
+#    earlystop = tf.keras.callbacks.EarlyStopping \
+#        (monitor="val_accuracy",
+#        patience= epo // 3,
+#         verbose=1)
 
-    batch_size = 70
     history = model.fit \
         (train_data,
          steps_per_epoch=len(train_data) // batch_size,
-         epochs=30,
+         epochs= epo,
          validation_data=val_data,
          validation_steps=len(val_data) // batch_size,
-         callbacks=[checkpoint, earlystop],
+        # callbacks=[checkpoint, earlystop],
+         callbacks=[checkpoint],
          verbose=1)
 
     model.evaluate(val_data)
-
     return model
 
 def load_model():
@@ -110,10 +113,10 @@ def determine_gender(img, x, y, w, h, model):
     if pred[0][0] > pred[0][1]:
         t = "FEMALE [{:0.2f}%]".format((pred[0][0]) * 100) if pred[0][0] >= .6 else "FEMALE {{?}} [{:0.2f}%]".format((pred[0][0]) * 100)
         font_size = get_optimal_font_scale(t, font_scale)
-        cv2.putText(img, t, (x,y-10), cv2.FONT_HERSHEY_TRIPLEX, font_size/2,(69, 47, 235), 2)
+        cv2.putText(img, t, (x,y-10), cv2.FONT_HERSHEY_TRIPLEX, font_size/2,(69, 47, 235), 1)
         image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     elif pred[0][1] > pred[0][0]:
         t = "MALE [{:0.2f}%]".format((pred[0][1]) * 100) if pred[0][1] >= .6 else "MALE {{?}} [{:0.2f}%]".format((pred[0][1]) * 100)
         font_size = get_optimal_font_scale(t, font_scale)
-        cv2.putText(img, t, (x, y - 10), cv2.FONT_HERSHEY_TRIPLEX, font_size/2, (235, 72, 47), 2)
+        cv2.putText(img, t, (x, y - 10), cv2.FONT_HERSHEY_TRIPLEX, font_size/2, (235, 72, 47), 1)
         image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
