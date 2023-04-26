@@ -20,7 +20,7 @@ def find_face(model, files):
         for (x, y, w, h) in front_faces:
             cv2.rectangle(img, (x, y), (x + w + 2, y + h + 2), (107, 235, 52), 2)
 
-            determine_gender(img,x ,y, w, h, model)
+            determine_gender(img, x, y, w, h, model)
 
         cv2.namedWindow(n.split('/')[-1], cv2.WINDOW_NORMAL)
         cv2.setWindowProperty(n.split('/')[-1], cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_KEEPRATIO)
